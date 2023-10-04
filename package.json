@@ -19,10 +19,13 @@
     "scripts": "main.js",
     "assets": [
       "public/**/*",
-      "data/**/*",
+      "data/**/*",  
       "node_modules/axios/**/*",
       "node_modules/body-parser/**/*",
-      "node_modules/express/**/*"
+      "node_modules/express/**/*",
+      "public/index.html",
+      "public/data.html",
+      "public/success.html"
     ],
     "outputPath": "dist"
   },
@@ -31,8 +34,9 @@
   },
   "files": [
     "main.js",
-    "public/index.html", 
+    "public/index.html",
     "public/data.html",
-    "public/success.html"
+    "public/success.html",
+    "data/**/*" 
   ]
 }

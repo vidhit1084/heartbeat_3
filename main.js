@@ -10,28 +10,62 @@ const port = 3001;
 let check = false;
 let flag = false;
 let jsonData;
-
-const publicDir = path.join(process.cwd(), "public");
-
+const publicDir = path.join(__dirname, "public");
+const dataDir = path.join(process.cwd(), "data"); // Define the data directory path
 app.use(express.static(publicDir));
 app.use(bodyParser.json());
 
-const fetchData = async () => {
-  const dataDir = path.join(process.cwd(), "data");
+// Function to create the 'data' directory if it doesn't exist
+const createDataDirectory = async () => {
   try {
-    await fs.mkdir(dataDir, { recursive: true }); // Ensure the directory exists
+    await fs.mkdir(dataDir, { recursive: true });
+    console.log("Created 'data' folder.");
+  } catch (error) {
+    if(error.code === 'ENOENT'){
+      await fs.mkdir(dataDir, { recursive: true });
+    }
+   else if (error.code === 'EEXIST') {
+
+      console.log("'data' folder already exists.");
+    } else {
+      console.error("Error creating 'data' folder:", error);
+    }
+  }
+};
+
+const checkDataDirectory = async () => {
+  try {
+    await fs.access(dataDir);
+    console.log("'data' folder exists.");
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.log("'data' folder does not exist.");
+      await createDataDirectory();
+    } else {
+      console.error("Error checking 'data' folder:", error);
+    }
+  }
+};
+
+
+const fetchData = async () => {
+  // Ensure the 'data' directory exists
+  await checkDataDirectory();
+
+  try {
     const jsonFiles = (await fs.readdir(dataDir)).filter((file) =>
       file.endsWith(".json")
     );
-    if (jsonFiles.length > 0) {
+    console.log(jsonFiles,"these");
+    if (jsonFiles == [] || jsonFiles.length > 0) {
       const firstJsonFile = jsonFiles[0];
-      const jsonData = JSON.parse(
+      const res = JSON.parse(
         await fs.readFile(path.join(dataDir, firstJsonFile), "utf-8")
       );
-      return jsonData;
+      return res;
     }
   } catch (error) {
-    console.error("Error reading JSON data:", error);
+    console.error("Error reading JSON data:", error, dataDir,"hello");
   }
   return null;
 };
@@ -68,10 +102,14 @@ const checkAppRunning = async (appName) => {
 };
 
 const initializeJsonData = async () => {
-  jsonData = await fetchData();
-  if (jsonData) {
-    console.log(jsonData);
-  }
+   jsonData = await fetchData();
+   if(jsonData){
+   return jsonData;
+   }
+   else{
+    console.log("no data here");
+   }
+  
 };
 
 const sendPing = async (jsonData) => {
@@ -97,11 +135,11 @@ app.post("/submit", async (req, res) => {
     return res.status(400).send("Missing client, store, or software.");
   }
 
-  const filePath = path.join(process.cwd(), "data", `${formData.client}.json`);
+  const filePath = path.join(dataDir, `${formData.client}.json`);
 
-  const jsonData = JSON.stringify(formData, null, 2);
+  const result = JSON.stringify(formData, null, 2);
   try {
-    await fs.writeFile(filePath, jsonData);
+    await fs.writeFile(filePath, result);
     initializeJsonData();
     const appsArray = formData.appsArray || [];
     console.log(appsArray);
@@ -114,17 +152,17 @@ app.post("/submit", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "public", "index.html"));
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
 app.get("/home", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "public", "data.html"));
+  res.sendFile(path.join(publicDir, "data.html"));
 });
 
 app.get("/success", (req, res) => {
   console.log("hi");
   flag = true;
-  res.sendFile(path.join(process.cwd(), "public", "success.html"));
+  res.sendFile(path.join(publicDir, "success.html"));
 });
 
 app.post("/flag", (req, res) => {
