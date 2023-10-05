@@ -21,11 +21,9 @@ const createDataDirectory = async () => {
     await fs.mkdir(dataDir, { recursive: true });
     console.log("Created 'data' folder.");
   } catch (error) {
-    if(error.code === 'ENOENT'){
+    if (error.code === "ENOENT") {
       await fs.mkdir(dataDir, { recursive: true });
-    }
-   else if (error.code === 'EEXIST') {
-
+    } else if (error.code === "EEXIST") {
       console.log("'data' folder already exists.");
     } else {
       console.error("Error creating 'data' folder:", error);
@@ -38,7 +36,7 @@ const checkDataDirectory = async () => {
     await fs.access(dataDir);
     console.log("'data' folder exists.");
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       console.log("'data' folder does not exist.");
       await createDataDirectory();
     } else {
@@ -46,7 +44,6 @@ const checkDataDirectory = async () => {
     }
   }
 };
-
 
 const fetchData = async () => {
   // Ensure the 'data' directory exists
@@ -56,7 +53,7 @@ const fetchData = async () => {
     const jsonFiles = (await fs.readdir(dataDir)).filter((file) =>
       file.endsWith(".json")
     );
-    console.log(jsonFiles,"these");
+    console.log(jsonFiles, "these");
     if (jsonFiles == [] || jsonFiles.length > 0) {
       const firstJsonFile = jsonFiles[0];
       const res = JSON.parse(
@@ -65,7 +62,7 @@ const fetchData = async () => {
       return res;
     }
   } catch (error) {
-    console.error("Error reading JSON data:", error, dataDir,"hello");
+    console.error("Error reading JSON data:", error, dataDir, "hello");
   }
   return null;
 };
@@ -102,14 +99,12 @@ const checkAppRunning = async (appName) => {
 };
 
 const initializeJsonData = async () => {
-   jsonData = await fetchData();
-   if(jsonData){
-   return jsonData;
-   }
-   else{
+  jsonData = await fetchData();
+  if (jsonData) {
+    return jsonData;
+  } else {
     console.log("no data here");
-   }
-  
+  }
 };
 
 const sendPing = async (jsonData) => {
@@ -125,6 +120,71 @@ const sendPing = async (jsonData) => {
     throw new Error("Error submitting data to the API.");
   }
 };
+
+app.get("/data", async (req, res) => {
+  const resp = await fetchData();
+  if (resp) {
+    console.log(resp, "hi");
+    return res.json({ result: resp });
+  } else {
+    res.status(404).json({ error: "Data not found" });
+  }
+});
+
+app.put("/update", async (req, res) => {
+  const data = req.body;
+  try {
+    if (
+      !data ||
+      !data.client ||
+      !data.store ||
+      !data.software ||
+      !data.appsArray
+    ) {
+      return res.status(400).json({ error: "Invalid data in the request" });
+    }
+    const dataDir = path.join(__dirname, "data");
+
+    // Use fs.promises.readdir to read the directory asynchronously
+    const jsonFiles = await fs.readdir(dataDir);
+
+    // Now you can use the filter method on jsonFiles
+    const filteredJsonFiles = jsonFiles.find((file) => file.endsWith(".json"));
+    console.log(filteredJsonFiles, "hehehe");
+    if (filteredJsonFiles.length > 0) {
+      jsonData = {
+        client: data.client,
+        store: data.store,
+        software: data.software,
+        appsArray: data.appsArray,
+      };
+      const dataToWrite = JSON.stringify(jsonData, null, 2);
+      const clientFile = path.join(dataDir, filteredJsonFiles);
+      const checkFile = await fs.access(clientFile);
+      console.log(checkFile);
+      //   if (checkFile) {
+      fs.writeFile(clientFile, dataToWrite, {
+        encoding: "utf8",
+        flag: "w",
+      });
+      return res.status(200).json({ message: "Data updated successfully" });
+      //   } else {
+      //     console.log("The file doesn't exist.");
+      //   }
+    } else {
+      console.log("No JSON files found in the directory.");
+    }
+  } catch (error) {
+    console.log("error editing file :", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// app.post("/updatedData", (req, res) => {
+//   const data = req.body;
+//   console.log(data);
+//   jsonData = data;
+// });
 
 app.post("/submit", async (req, res) => {
   const formData = req.body;
@@ -157,6 +217,10 @@ app.get("/", (req, res) => {
 
 app.get("/home", (req, res) => {
   res.sendFile(path.join(publicDir, "data.html"));
+});
+
+app.get("/edit", (req, res) => {
+  res.sendFile(path.join(publicDir, "edit.html"));
 });
 
 app.get("/success", (req, res) => {
