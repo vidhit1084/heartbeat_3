@@ -143,7 +143,7 @@ app.put("/update", async (req, res) => {
     ) {
       return res.status(400).json({ error: "Invalid data in the request" });
     }
-    const dataDir = path.join(__dirname, "data");
+    const dataDir = path.join(process.cwd(), "data");
 
     // Use fs.promises.readdir to read the directory asynchronously
     const jsonFiles = await fs.readdir(dataDir);
